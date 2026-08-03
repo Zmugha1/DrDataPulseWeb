@@ -5,6 +5,8 @@ export type Lead = {
   source: string | null
   stage: string | null
   notes: string | null
+  work_status: string | null
+  pulse_note: string | null
   created_at: string
 }
 
