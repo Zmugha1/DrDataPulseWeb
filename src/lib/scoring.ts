@@ -1,3 +1,4 @@
+import type { MarketConditions } from '@/lib/marketWatch'
 import type { Lead, LeadEvent } from '@/lib/types'
 
 export type ScoreLine = {
@@ -112,12 +113,14 @@ function sourceWarmth(source: string | null | undefined): ScoreLine | null {
 }
 
 /**
- * Deterministic lead score from lead + events context. Pure, no API calls.
+ * Deterministic lead score from lead + events + optional market conditions.
+ * Pure function. No API calls.
  */
 export function scoreLead(
   lead: Lead,
   allLeads: Lead[],
   events: LeadEvent[],
+  market: MarketConditions | null = null,
 ): LeadScore {
   const source = lead.source?.trim().toLowerCase() ?? ''
   const isCareers = source === 'careers_page'
@@ -153,21 +156,25 @@ export function scoreLead(
   }
 
   const verticalText = [lead.notes ?? '', needs ?? ''].join(' ')
-  if (hasAnyTerm(verticalText, BUILDER_TERMS)) {
+  const matchesBuilder = hasAnyTerm(verticalText, BUILDER_TERMS)
+  const matchesAdvisor = hasAnyTerm(verticalText, ADVISOR_TERMS)
+  const matchesGrowth = hasAnyTerm(verticalText, GROWTH_TERMS)
+
+  if (matchesBuilder) {
     lines.push({
       signal: 'Vertical fit',
       reason: 'Matches Builder Suite',
       points: 15,
     })
   }
-  if (hasAnyTerm(verticalText, ADVISOR_TERMS)) {
+  if (matchesAdvisor) {
     lines.push({
       signal: 'Vertical fit',
       reason: 'Matches Advisor Suite',
       points: 15,
     })
   }
-  if (hasAnyTerm(verticalText, GROWTH_TERMS)) {
+  if (matchesGrowth) {
     lines.push({
       signal: 'Vertical fit',
       reason: 'Matches Growth Suite',
@@ -196,6 +203,23 @@ export function scoreLead(
     })
   }
 
+  if (market) {
+    if (matchesBuilder && market.wiPermitsUp) {
+      lines.push({
+        signal: 'Market conditions',
+        reason: 'Wisconsin construction demand rising',
+        points: 8,
+      })
+    }
+    if (matchesGrowth && (market.mortgageDown || market.startsUp)) {
+      lines.push({
+        signal: 'Market conditions',
+        reason: 'Real estate conditions favorable',
+        points: 8,
+      })
+    }
+  }
+
   const total = lines.reduce((sum, line) => sum + line.points, 0)
   const bucket = bucketForScore(total, false)
 
@@ -208,10 +232,14 @@ export function scoreLead(
   }
 }
 
-export function scoreLeads(leads: Lead[], events: LeadEvent[]): ScoredLead[] {
+export function scoreLeads(
+  leads: Lead[],
+  events: LeadEvent[],
+  market: MarketConditions | null = null,
+): ScoredLead[] {
   return leads.map((lead) => ({
     ...lead,
-    score: scoreLead(lead, leads, events),
+    score: scoreLead(lead, leads, events, market),
   }))
 }
 

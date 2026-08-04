@@ -16,11 +16,42 @@ export type MarketWatchPayload = {
 
 export type TrendDirection = 'up' | 'down' | 'flat' | 'unknown'
 
+/** Compact market flags for scoring. Null means market data unavailable. */
+export type MarketConditions = {
+  wiPermitsUp: boolean
+  startsUp: boolean
+  mortgageDown: boolean
+}
+
 export function trendDirection(snapshot: SeriesSnapshot): TrendDirection {
   if (snapshot.value === null || snapshot.prevValue === null) return 'unknown'
   if (snapshot.value > snapshot.prevValue) return 'up'
   if (snapshot.value < snapshot.prevValue) return 'down'
   return 'flat'
+}
+
+/**
+ * Derive scoring flags from FRED snapshots. Returns null if payload is missing
+ * or required series cannot be compared (so scoring skips market nudges).
+ */
+export function deriveMarketConditions(
+  payload: MarketWatchPayload | null | undefined,
+): MarketConditions | null {
+  if (!payload) return null
+
+  const wi = trendDirection(payload.wiPermits)
+  const starts = trendDirection(payload.starts)
+  const mortgage = trendDirection(payload.mortgage)
+
+  if (wi === 'unknown' && starts === 'unknown' && mortgage === 'unknown') {
+    return null
+  }
+
+  return {
+    wiPermitsUp: wi === 'up',
+    startsUp: starts === 'up',
+    mortgageDown: mortgage === 'down',
+  }
 }
 
 export function formatIndicatorValue(

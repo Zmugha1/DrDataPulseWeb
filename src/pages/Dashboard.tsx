@@ -2,6 +2,7 @@ import { useEffect, useState, type FocusEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import MarketWatch from '@/components/MarketWatch'
 import { useAuth } from '@/context/AuthContext'
+import { useMarketWatch } from '@/hooks/useMarketWatch'
 import { partitionScoredLeads, scoreLeads, type ScoredLead } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Lead, LeadEvent } from '@/lib/types'
@@ -293,6 +294,12 @@ export default function Dashboard() {
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({})
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({})
   const [hideClosed, setHideClosed] = useState(true)
+  const {
+    data: marketData,
+    loading: marketLoading,
+    unavailable: marketUnavailable,
+    conditions: marketConditions,
+  } = useMarketWatch()
 
   useEffect(() => {
     if (!authReady || !isAuthenticated) {
@@ -380,7 +387,7 @@ export default function Dashboard() {
     }
   }, [authReady, isAuthenticated])
 
-  const scored = scoreLeads(leads, events)
+  const scored = scoreLeads(leads, events, marketConditions)
   const { ranked, notSales } = partitionScoredLeads(scored)
   const activeRanked = hideClosed
     ? ranked.filter((lead) => !isClosedWorkStatus(lead.work_status))
@@ -447,7 +454,11 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <MarketWatch />
+      <MarketWatch
+        data={marketData}
+        loading={marketLoading}
+        unavailable={marketUnavailable}
+      />
 
       {!loading && !error && ranked.length > 0 ? (
         <section className="mb-12 min-w-0">

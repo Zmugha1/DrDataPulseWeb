@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowRight, ArrowUp } from 'lucide-react'
 import {
   formatIndicatorDate,
@@ -98,42 +97,13 @@ function IndicatorCard({
   )
 }
 
-export default function MarketWatch() {
-  const [data, setData] = useState<MarketWatchPayload | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [unavailable, setUnavailable] = useState(false)
+type MarketWatchProps = {
+  data: MarketWatchPayload | null
+  loading: boolean
+  unavailable: boolean
+}
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-      setUnavailable(false)
-
-      try {
-        const response = await fetch('/api/market-watch')
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
-        }
-        const payload = (await response.json()) as MarketWatchPayload
-        if (cancelled) return
-        setData(payload)
-      } catch {
-        if (cancelled) return
-        setData(null)
-        setUnavailable(true)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
+export default function MarketWatch({ data, loading, unavailable }: MarketWatchProps) {
   return (
     <section className="mb-12 min-w-0">
       <div className="mb-5">
