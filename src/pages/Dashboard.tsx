@@ -1,5 +1,6 @@
 import { useEffect, useState, type FocusEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
+import MarketWatch from '@/components/MarketWatch'
 import { useAuth } from '@/context/AuthContext'
 import { partitionScoredLeads, scoreLeads, type ScoredLead } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
@@ -403,6 +404,8 @@ export default function Dashboard() {
           </p>
         </div>
       ) : null}
+
+      <MarketWatch />
 
       {!loading && !error && ranked.length > 0 ? (
         <section className="mb-12 min-w-0">
