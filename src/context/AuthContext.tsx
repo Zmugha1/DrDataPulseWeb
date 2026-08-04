@@ -13,12 +13,21 @@ import { supabase } from '@/lib/supabase'
 type AuthContextValue = {
   session: Session | null
   userEmail: string | null
+  /** True until the first getSession / auth event has resolved. */
   loading: boolean
+  /** True when auth init finished (loading is false). */
+  authReady: boolean
+  /** True when a session with an access_token is present. */
+  isAuthenticated: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+function hasAccessToken(session: Session | null | undefined): session is Session {
+  return Boolean(session?.access_token)
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -61,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       userEmail: session?.user?.email ?? null,
       loading,
+      authReady: !loading,
+      isAuthenticated: hasAccessToken(session),
       signIn,
       signOut,
     }),

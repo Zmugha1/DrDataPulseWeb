@@ -285,7 +285,7 @@ function LeadCard({
 }
 
 export default function Dashboard() {
-  const { userEmail, session } = useAuth()
+  const { userEmail, isAuthenticated, authReady } = useAuth()
   const [leads, setLeads] = useState<Lead[]>([])
   const [events, setEvents] = useState<LeadEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -295,20 +295,62 @@ export default function Dashboard() {
   const [hideClosed, setHideClosed] = useState(true)
 
   useEffect(() => {
-    if (!session) return
+    if (!authReady || !isAuthenticated) {
+      setLoading(true)
+      return
+    }
 
     let cancelled = false
+
+    async function confirmAuthedSession() {
+      const {
+        data: { session: current },
+      } = await supabase.auth.getSession()
+      if (current?.access_token) return current
+
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      if (cancelled) return null
+
+      const {
+        data: { session: retry },
+      } = await supabase.auth.getSession()
+      return retry?.access_token ? retry : null
+    }
+
+    async function queryLeadsAndEvents() {
+      return Promise.all([
+        supabase.from('leads').select('*').order('created_at', { ascending: false }),
+        supabase.from('events').select('*'),
+      ])
+    }
 
     async function load() {
       setLoading(true)
       setError(null)
 
-      const [leadsResult, eventsResult] = await Promise.all([
-        supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.from('events').select('*'),
-      ])
-
+      const confirmed = await confirmAuthedSession()
       if (cancelled) return
+
+      if (!confirmed?.access_token) {
+        // Do not query as anon. Stay in loading until auth becomes ready again.
+        setLoading(true)
+        return
+      }
+
+      let [leadsResult, eventsResult] = await queryLeadsAndEvents()
+      if (cancelled) return
+
+      // Race guard: empty success while authed can mean JWT was not attached yet.
+      if (!leadsResult.error && (leadsResult.data?.length ?? 0) === 0) {
+        const again = await confirmAuthedSession()
+        if (cancelled) return
+        if (again?.access_token) {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          if (cancelled) return
+          ;[leadsResult, eventsResult] = await queryLeadsAndEvents()
+          if (cancelled) return
+        }
+      }
 
       if (leadsResult.error) {
         setError(leadsResult.error.message)
@@ -336,7 +378,7 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [session])
+  }, [authReady, isAuthenticated])
 
   const scored = scoreLeads(leads, events)
   const { ranked, notSales } = partitionScoredLeads(scored)

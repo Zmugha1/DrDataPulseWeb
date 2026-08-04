@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 
 export default function Login() {
-  const { session, loading, signIn } = useAuth()
+  const { loading, isAuthenticated, signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from || '/dashboard'
@@ -13,7 +13,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && session) {
+  if (!loading && isAuthenticated) {
     return <Navigate to={from} replace />
   }
 

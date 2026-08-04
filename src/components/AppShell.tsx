@@ -10,7 +10,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   ].join(' ')
 
 export default function AppShell() {
-  const { session, userEmail, loading, signOut } = useAuth()
+  const { isAuthenticated, userEmail, loading, signOut } = useAuth()
 
   async function handleSignOut() {
     await signOut()
@@ -35,7 +35,7 @@ export default function AppShell() {
                 Dashboard
               </NavLink>
             </nav>
-            {!loading && session ? (
+            {!loading && isAuthenticated ? (
               <div className="ml-1 flex items-center gap-2 border-l border-navy/10 pl-2 sm:ml-2 sm:pl-3">
                 {userEmail ? (
                   <span className="hidden max-w-[10rem] truncate text-xs text-navy/50 sm:inline">
