@@ -1,8 +1,10 @@
 import { useEffect, useState, type FocusEvent } from 'react'
 import { ChevronDown } from 'lucide-react'
 import MarketWatch from '@/components/MarketWatch'
+import MorningBrief from '@/components/MorningBrief'
 import { useAuth } from '@/context/AuthContext'
 import { useMarketWatch } from '@/hooks/useMarketWatch'
+import { buildMorningBrief } from '@/lib/morningBrief'
 import { partitionScoredLeads, scoreLeads, type ScoredLead } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Lead, LeadEvent } from '@/lib/types'
@@ -392,6 +394,11 @@ export default function Dashboard() {
   const activeRanked = hideClosed
     ? ranked.filter((lead) => !isClosedWorkStatus(lead.work_status))
     : ranked
+  const briefStats = buildMorningBrief(scored, marketConditions)
+
+  function jumpToHotLeads() {
+    document.getElementById('ranked-leads')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   function toggleOpen(id: string) {
     setOpenIds((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -454,6 +461,12 @@ export default function Dashboard() {
         </div>
       ) : null}
 
+      <MorningBrief
+        stats={briefStats}
+        leadsLoading={loading}
+        onJumpToHot={jumpToHotLeads}
+      />
+
       <MarketWatch
         data={marketData}
         loading={marketLoading}
@@ -461,7 +474,7 @@ export default function Dashboard() {
       />
 
       {!loading && !error && ranked.length > 0 ? (
-        <section className="mb-12 min-w-0">
+        <section id="ranked-leads" className="mb-12 min-w-0 scroll-mt-6">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <h2 className="font-display text-lg font-semibold text-navy">
